@@ -42,8 +42,8 @@ export const PP_CONFIG = {
 ## 3. SQL 실행
 
 1. Supabase 대시보드 → **SQL Editor** → New query.
-2. `supabase/migrations/20261126120000_init_planner.sql` 파일 전체를 붙여 넣고 **Run**.
-3. 한 번 더 실행해도 됩니다. 이미 만든 테이블은 유지하고, 정책만 다시 만듭니다.
+2. `supabase/migrations` 안의 SQL을 파일 이름 순서대로 실행합니다. 먼저 `20261126120000_init_planner.sql`, 다음 `20261126153000_created_at.sql` 입니다.
+3. 한 번 더 실행해도 됩니다. 이미 만든 테이블은 유지하고, 정책만 다시 만듭니다. `created_at` 파일은 칸이 있으면 건너뜁니다.
 4. Table Editor에 `daily_entries`, `weekly_entries`, `monthly_entries`, `worksheets`, `reviews`, `start_points`가 보이면 됩니다.
 5. 각 테이블의 RLS가 켜져 있는지 확인합니다. 정책은 `authenticated`만, `user_id = auth.uid()` 입니다. `anon`에는 테이블 권한을 주지 않습니다.
 
@@ -109,3 +109,62 @@ Google 쪽 리디렉션 주소는 **Pages 주소가 아닙니다.** Supabase 콜
 5. 다른 계정으로 들어가면 앞 계정의 글이 보이지 않는지 봅니다.
 
 문제가 나면 SQL을 다시 실행했는지, Redirect URLs에 Pages 주소가 있는지, Google 리디렉션 URI가 Supabase 콜백인지를 먼저 봅니다.
+
+## 9. 지표
+
+분석 도구는 없습니다. 숫자는 SQL Editor에서 직접 봅니다. 이 쿼리는 대시보드의 postgres 역할로 실행하며, RLS를 넘어 전체 계정을 셉니다. 앱의 anon 키로는 돌리지 않습니다.
+
+가입일은 `auth.users.created_at` 입니다. 기록을 처음 저장한 시각은 `daily_entries`, `weekly_entries`, `worksheets`, `reviews`의 `created_at` 입니다. 이 칸은 기본값이 `now()`이고, 이후 수정해도 바뀌지 않습니다. 플래너에 적힌 날짜나 `updated_at`(마지막 수정)과는 다릅니다. 같은 행을 나중에 고친 날은 아래 쿼리에 다시 잡히지 않습니다.
+
+주간 활성은, 서울 시간으로 한 주(월요일 시작) 안에 서로 다른 날 3일 이상 기록을 처음 저장한 계정입니다.
+
+```sql
+with writes as (
+  select user_id, created_at from public.daily_entries
+  union all
+  select user_id, created_at from public.weekly_entries
+  union all
+  select user_id, created_at from public.worksheets
+  union all
+  select user_id, created_at from public.reviews
+),
+seoul_days as (
+  select
+    user_id,
+    date_trunc('week', created_at at time zone 'Asia/Seoul')::date as week_start,
+    (created_at at time zone 'Asia/Seoul')::date as wrote_on
+  from writes
+)
+select week_start, user_id, count(distinct wrote_on) as days_written
+from seoul_days
+group by week_start, user_id
+having count(distinct wrote_on) >= 3
+order by week_start, user_id;
+```
+
+4주 리텐션은, 가입한 서울 날짜를 Day 0으로 두고 Day 22–28에 무엇이든 처음 저장한 계정입니다.
+
+```sql
+with signups as (
+  select id as user_id, (created_at at time zone 'Asia/Seoul')::date as signup_day
+  from auth.users
+),
+writes as (
+  select user_id, (created_at at time zone 'Asia/Seoul')::date as wrote_on
+  from public.daily_entries
+  union all
+  select user_id, (created_at at time zone 'Asia/Seoul')::date as wrote_on
+  from public.weekly_entries
+  union all
+  select user_id, (created_at at time zone 'Asia/Seoul')::date as wrote_on
+  from public.worksheets
+  union all
+  select user_id, (created_at at time zone 'Asia/Seoul')::date as wrote_on
+  from public.reviews
+)
+select distinct s.user_id, s.signup_day
+from signups s
+join writes w on w.user_id = s.user_id
+where w.wrote_on between s.signup_day + 22 and s.signup_day + 28
+order by s.signup_day, s.user_id;
+```

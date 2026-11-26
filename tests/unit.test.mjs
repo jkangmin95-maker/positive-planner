@@ -16,6 +16,7 @@ import { applyPhrase, showOtherSide } from "../src/js/rules.js";
 import { matchPath, stripBase } from "../src/js/router.js";
 import { seedSample, SAMPLE_SHEETS } from "../src/js/sample.js";
 import { createStore } from "../src/js/store.js";
+import { toDailyRow, toReviewRow, toWeeklyRow, toWorksheetRow } from "../src/js/rows.js";
 import { hasDailyContent, journalToText } from "../src/js/textExport.js";
 
 test("서울 날짜는 자정을 넘기면 다음 날이다", () => {
@@ -111,6 +112,7 @@ test("예시 데이터는 오늘 한 줄과 워크시트 셋을 채운다", asyn
 
 test("SQL은 본인 행만 열고 anon에는 권한을 주지 않는다", async () => {
   const sql = await readFile("supabase/migrations/20261126120000_init_planner.sql", "utf8");
+  const created = await readFile("supabase/migrations/20261126153000_created_at.sql", "utf8");
   assert.match(sql, /enable row level security/);
   assert.match(sql, /\(select auth\.uid\(\)\) = user_id/);
   assert.match(sql, /with check \(\(select auth\.uid\(\)\) = user_id\)/);
@@ -118,8 +120,42 @@ test("SQL은 본인 행만 열고 anon에는 권한을 주지 않는다", async 
   assert.match(sql, /revoke all on table %I\.%I from public, anon/);
   assert.doesNotMatch(sql, /grant\s+.*service_role/i);
   assert.doesNotMatch(sql, /using \(true\)/);
-  for (const table of ["daily_entries", "weekly_entries", "monthly_entries", "worksheets", "reviews", "start_points"]) {
-    assert.match(sql, new RegExp(table));
+  assert.doesNotMatch(created, /create policy/);
+  assert.doesNotMatch(created, /enable row level security/);
+  for (const table of ["daily_entries", "weekly_entries", "worksheets", "reviews"]) {
+    assert.match(sql, new RegExp(`${table}[\\s\\S]*created_at timestamptz not null default now\\(\\)`));
+    assert.match(created, new RegExp(`alter table public\\.${table}`));
+    assert.match(sql, new RegExp(`keep_created_at on public\\.${table}`));
+  }
+  assert.match(sql, /new\.created_at = old\.created_at/);
+  const monthly = sql.match(/create table if not exists public\.monthly_entries \([\s\S]*?\);/)[0];
+  const startPoints = sql.match(/create table if not exists public\.start_points \([\s\S]*?\);/)[0];
+  assert.doesNotMatch(monthly, /created_at/);
+  assert.doesNotMatch(startPoints, /created_at/);
+});
+
+test("저장 요청은 created_at을 덮어쓰지 않는다", () => {
+  const record = {
+    date: "2026-11-26",
+    weekStart: "2026-11-23",
+    month: "2026-11",
+    id: "11111111-1111-4111-8111-111111111111",
+    type: "A",
+    kind: "4week",
+    periodStart: "2026-11-02",
+    periodEnd: "2026-11-29",
+    createdAt: "2020-01-01T00:00:00.000Z",
+    updatedAt: "2026-11-26T00:00:00.000Z",
+    body: {},
+  };
+  for (const row of [
+    toDailyRow(record, "user"),
+    toWeeklyRow(record, "user"),
+    toWorksheetRow(record, "user"),
+    toReviewRow(record, "user"),
+  ]) {
+    assert.equal(Object.hasOwn(row, "created_at"), false);
+    assert.equal(row.updated_at, record.updatedAt);
   }
 });
 

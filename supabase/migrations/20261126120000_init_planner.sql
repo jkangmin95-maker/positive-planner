@@ -22,6 +22,25 @@ $$;
 
 revoke all on function public.set_updated_at() from public, anon, authenticated;
 
+-- created_at은 처음 저장 시각만 남긴다. UPDATE에서는 클라이언트가 보낸 값으로 바꾸지 않는다.
+create or replace function public.keep_created_at()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' then
+    new.created_at = old.created_at;
+  elsif new.created_at is null then
+    new.created_at = now();
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.keep_created_at() from public, anon, authenticated;
+
 create table if not exists public.daily_entries (
   user_id uuid not null references auth.users (id) on delete cascade,
   entry_date date not null,
@@ -35,6 +54,7 @@ create table if not exists public.daily_entries (
   tasks jsonb not null default '[]'::jsonb,
   belief_to_accept text not null default '',
   next_action text not null default '',
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, entry_date),
   constraint daily_entries_one_line_len check (char_length(one_line) <= 4000),
@@ -52,6 +72,7 @@ create table if not exists public.weekly_entries (
   tasks jsonb not null default '[]'::jsonb,
   next_fix text not null default '',
   review text not null default '',
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, week_start),
   constraint weekly_entries_tasks_array check (jsonb_typeof(tasks) = 'array')
@@ -74,6 +95,7 @@ create table if not exists public.worksheets (
   entry_date date,
   daily_date date,
   body jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint worksheets_type check (sheet_type in ('A', 'B', 'C')),
   constraint worksheets_body_object check (jsonb_typeof(body) = 'object')
@@ -88,6 +110,7 @@ create table if not exists public.reviews (
   period_start date not null,
   period_end date not null,
   body jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, kind, period_start),
   constraint reviews_kind check (kind in ('4week', '13week')),
@@ -110,6 +133,10 @@ comment on table public.worksheets is 'A 그럴 수 있지 / B 고정관념 전�
 comment on table public.reviews is '4주·13주 회고. 주간 회고는 weekly_entries.review.';
 comment on column public.daily_entries.next_action is '다음 행동 하나. 못한 이유 목록을 두지 않음.';
 comment on column public.daily_entries.tasks is '[{id,text,nextFix}] 다음에 고칠 한 가지.';
+comment on column public.daily_entries.created_at is '행을 처음 저장한 시각. 수정해도 바뀌지 않음. entry_date, updated_at과 다름.';
+comment on column public.weekly_entries.created_at is '행을 처음 저장한 시각. 수정해도 바뀌지 않음.';
+comment on column public.worksheets.created_at is '행을 처음 저장한 시각. 수정해도 바뀌지 않음.';
+comment on column public.reviews.created_at is '행을 처음 저장한 시각. 수정해도 바뀌지 않음.';
 
 create or replace function public.pp_apply_owner_rls(schema_name text, table_name text)
 returns void
@@ -170,10 +197,20 @@ create trigger set_updated_at
 before insert or update on public.daily_entries
 for each row execute function public.set_updated_at();
 
+drop trigger if exists keep_created_at on public.daily_entries;
+create trigger keep_created_at
+before insert or update on public.daily_entries
+for each row execute function public.keep_created_at();
+
 drop trigger if exists set_updated_at on public.weekly_entries;
 create trigger set_updated_at
 before insert or update on public.weekly_entries
 for each row execute function public.set_updated_at();
+
+drop trigger if exists keep_created_at on public.weekly_entries;
+create trigger keep_created_at
+before insert or update on public.weekly_entries
+for each row execute function public.keep_created_at();
 
 drop trigger if exists set_updated_at on public.monthly_entries;
 create trigger set_updated_at
@@ -185,10 +222,20 @@ create trigger set_updated_at
 before insert or update on public.worksheets
 for each row execute function public.set_updated_at();
 
+drop trigger if exists keep_created_at on public.worksheets;
+create trigger keep_created_at
+before insert or update on public.worksheets
+for each row execute function public.keep_created_at();
+
 drop trigger if exists set_updated_at on public.reviews;
 create trigger set_updated_at
 before insert or update on public.reviews
 for each row execute function public.set_updated_at();
+
+drop trigger if exists keep_created_at on public.reviews;
+create trigger keep_created_at
+before insert or update on public.reviews
+for each row execute function public.keep_created_at();
 
 drop trigger if exists set_updated_at on public.start_points;
 create trigger set_updated_at

@@ -119,6 +119,7 @@ export function fromDailyRow(row) {
     tasks: cleanTasks(row.tasks),
     beliefToAccept: row.belief_to_accept ?? "",
     nextAction: row.next_action ?? "",
+    createdAt: row.created_at ?? "",
     updatedAt: row.updated_at ?? "",
     dirty: false,
   };
@@ -151,6 +152,7 @@ export function fromWeeklyRow(row) {
     tasks: cleanTasks(row.tasks, { withNextFix: false }),
     nextFix: row.next_fix ?? "",
     review: row.review ?? "",
+    createdAt: row.created_at ?? "",
     updatedAt: row.updated_at ?? "",
     dirty: false,
   };
@@ -195,6 +197,7 @@ export function fromWorksheetRow(row) {
     entryDate: dateOnly(row.entry_date),
     dailyDate: row.daily_date ? dateOnly(row.daily_date) : null,
     body: row.body || {},
+    createdAt: row.created_at ?? "",
     updatedAt: row.updated_at ?? "",
     dirty: false,
   };
@@ -217,6 +220,7 @@ export function fromReviewRow(row) {
     periodStart: dateOnly(row.period_start),
     periodEnd: dateOnly(row.period_end),
     body: row.body || {},
+    createdAt: row.created_at ?? "",
     updatedAt: row.updated_at ?? "",
     dirty: false,
   };
