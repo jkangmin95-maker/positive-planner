@@ -236,13 +236,24 @@ export function playGoldDust({ duration = 620 } = {}) {
   dustFrame = requestAnimationFrame(tick);
 }
 
-export function loadPaperTexture() {
-  if (document.body.classList.contains("has-paper")) return;
-  const run = () => {
-    const img = new Image();
-    img.onload = () => document.body.classList.add("has-paper");
-    img.src = assetUrl("textures/paper-faint.jpg");
+function loadLazyImage(path, className) {
+  if (document.body.classList.contains(className)) return;
+  const img = new Image();
+  img.onload = () => document.body.classList.add(className);
+  img.onerror = () => {
+    if (path.endsWith(".webp")) {
+      img.onerror = null;
+      img.src = assetUrl(path.replace(/\.webp$/, ".jpg"));
+    }
   };
-  if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 2500 });
-  else window.setTimeout(run, 600);
+  img.src = assetUrl(path);
+}
+
+export function loadPaperTexture() {
+  const run = () => {
+    loadLazyImage("textures/parchment.webp", "has-paper");
+    loadLazyImage("textures/desk.webp", "has-desk");
+  };
+  if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 1800 });
+  else window.setTimeout(run, 400);
 }

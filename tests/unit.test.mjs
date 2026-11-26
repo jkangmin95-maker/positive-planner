@@ -274,4 +274,6 @@ test("본문과 칸 이름은 카드 위에서 최소 7:1이다", async () => {
   assert.ok(contrast(ink, card) >= 7, `ink ${contrast(ink, card).toFixed(2)}`);
   assert.ok(contrast(muted, card) >= 7, `muted ${contrast(muted, card).toFixed(2)}`);
   assert.ok(contrast(gold, card) >= 7, `gold ${contrast(gold, card).toFixed(2)}`);
+  const paper = css.match(/--paper:\s*(#[0-9a-fA-F]{6})/)?.[1] || card;
+  assert.ok(contrast(ink, paper) >= 7, `ink on paper ${contrast(ink, paper).toFixed(2)}`);
 });

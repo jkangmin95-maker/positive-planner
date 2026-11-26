@@ -1,5 +1,5 @@
 /* 앱 껍데기만 캐시합니다. 기록 본문은 캐시에 넣지 않습니다. */
-const CACHE = "positive-planner-premium-__BUILD_ID__";
+const CACHE = "positive-planner-journal-__BUILD_ID__";
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,9 +12,12 @@ const ASSETS = [
   "./icons/apple-touch-icon.png",
   "./icons/favicon-32.png",
   "./fonts/PositiveSerif-Title.woff",
+  "./fonts/SongMyung-Book.woff2",
+  "./fonts/BrushTitle.woff2",
   "./textures/cover.webp",
   "./textures/cover.jpg",
-  "./textures/paper-faint.jpg",
+  "./textures/desk.webp",
+  "./textures/parchment.webp",
 ];
 
 self.addEventListener("install", (event) => {

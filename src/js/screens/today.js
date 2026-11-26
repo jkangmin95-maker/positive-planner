@@ -1,20 +1,75 @@
 import { el, link } from "../dom.js";
-import { autosave, field, phraseChips, taskEditor } from "../fields.js";
+import { autosave } from "../fields.js";
 import { addDays, formatKoreanDate, isIsoDate } from "../dates.js";
-import { showOtherSide } from "../rules.js";
-import { BELIEF_PHRASES } from "../guides.js";
+import { go } from "../router.js";
+import { bindJournalPages } from "../pages.js";
+
+const QUOTES = [
+  "긍정은 나를 더 행복하게 하고 더 좋은 결과로 이끄는 선택이다.",
+  "감정은 떠오를 수 있지만, 붙잡는 것은 선택이다.",
+  "모든 생각은 선택이다.",
+  "감사하다고 해야 감사한 것이 된다.",
+  "그럴 수 있지.",
+  "하나 배운 거지.",
+];
+
+
+function mark(kind) {
+  const node = el("span", { class: `mark mark-${kind}`, "aria-hidden": "true" });
+  node.innerHTML =
+    kind === "sun"
+      ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.4"/><g stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M12 3.2v2.4M12 18.4v2.4M3.2 12h2.4M18.4 12h2.4M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M5.6 18.4l1.7-1.7M16.7 7.3l1.7-1.7"/></g></svg>'
+      : '<svg viewBox="0 0 24 24"><path d="M15.2 4.6a7.6 7.6 0 1 0 4.2 13.4A8 8 0 1 1 15.2 4.6Z" fill="currentColor"/></svg>';
+  return node;
+}
+
+function quoteFor(date) {
+  const n = String(date).split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return QUOTES[n % QUOTES.length];
+}
+
+function splitLines(text, count) {
+  const parts = String(text || "").split("\n");
+  while (parts.length < count) parts.push("");
+  return parts.slice(0, count);
+}
+
+function joinLines(values) {
+  const parts = values.map((value) => String(value || ""));
+  while (parts.length && parts[parts.length - 1] === "") parts.pop();
+  return parts.join("\n");
+}
+
+function ruledLines({ id, label, values, count, onSave, multiline = false }) {
+  const items = [];
+  const controls = [];
+  const current = splitLines(values, count);
+  const flush = () => onSave(joinLines(controls.map((node) => node.value)));
+  for (let i = 0; i < count; i += 1) {
+    const control = el(multiline ? "textarea" : "input", {
+      id: i === 0 ? id : `${id}-${i + 1}`,
+      class: "page-line",
+      rows: multiline ? "1" : null,
+      value: current[i],
+      autocomplete: "off",
+      "aria-label": `${label} ${i + 1}`,
+    });
+    if (!multiline) control.setAttribute("type", "text");
+    autosave(control, flush);
+    controls.push(control);
+    items.push(el("li", {}, [control]));
+  }
+  return el("section", { class: "prompt" }, [
+    el("h2", { class: "prompt-title" }, label),
+    el("ol", { class: "ruled", start: "1" }, items),
+  ]);
+}
 
 export async function renderToday(ctx, route) {
   const requested = route.params.date;
   const date = requested && isIsoDate(requested) ? requested : ctx.today;
   const daily = await ctx.store.loadDaily(date);
   const isToday = date === ctx.today;
-  const guide = route.query.get("guide") || "";
-  const hasText = (value) => String(value || "").trim().length > 0;
-  const choiceOpen = [daily.emotionFelt, daily.thoughtHeld, daily.choices, daily.feelingNote, daily.resultNote, daily.otherSideOneThing].some(hasText);
-  const tasksOpen = (daily.tasks || []).some((task) => hasText(task.text) || hasText(task.nextFix));
-  const beliefOpen = hasText(daily.beliefToAccept);
-  const nextOpen = hasText(daily.nextAction);
   const save = (partial) => ctx.store.patchDaily(date, partial).then(ctx.setStatus);
 
   const one = el("textarea", {
@@ -25,151 +80,103 @@ export async function renderToday(ctx, route) {
     placeholder: "떠오른 그대로, 한 줄이면 충분합니다.",
     "aria-label": "오늘 한 줄",
     autocomplete: "off",
+    class: "page-verse",
   });
   if (isToday) one.dataset.oneline = "today";
   autosave(one, (value) => (isToday ? ctx.saveTodayLine(value, one) : save({ oneLine: value })));
 
-  const emotion = field({
-    id: "emotion",
-    label: "떠오른 감정",
-    book: "감정은 떠오를 수 있음",
-    value: daily.emotionFelt,
-    multiline: true,
-    rows: 2,
-  });
-  const thought = field({
-    id: "thought",
-    label: "붙잡을 생각",
-    book: "붙잡는 것은 선택",
-    value: daily.thoughtHeld,
-    multiline: true,
-    rows: 2,
-  });
-  const choices = field({
-    id: "choices",
-    label: "고르는 선택",
-    book: "긍정",
-    value: daily.choices,
-    multiline: true,
-    rows: 2,
-  });
-  const feeling = field({
-    id: "feeling",
-    label: "기분이 편해지는지",
-    value: daily.feelingNote,
-    multiline: true,
-    rows: 2,
-    hint: "짧은 메모입니다. 점수가 아닙니다.",
-  });
-  const result = field({
-    id: "result",
-    label: "결과도 나아지는지",
-    value: daily.resultNote,
-    multiline: true,
-    rows: 2,
-  });
-  const other = field({
-    id: "other-side",
-    label: "다른 쪽을 위한 작은 한 가지",
-    value: daily.otherSideOneThing,
-    multiline: true,
-    rows: 2,
-  });
-  const otherWrap = el("div", {}, other.wrap);
-  const syncOther = () => {
-    otherWrap.hidden = !showOtherSide(feeling.control.value, result.control.value);
-  };
-  syncOther();
-
-  autosave(emotion.control, (value) => save({ emotionFelt: value }));
-  autosave(thought.control, (value) => save({ thoughtHeld: value }));
-  autosave(choices.control, (value) => save({ choices: value }));
-  autosave(feeling.control, (value) => {
-    syncOther();
-    return save({ feelingNote: value });
-  });
-  autosave(result.control, (value) => {
-    syncOther();
-    return save({ resultNote: value });
-  });
-  autosave(other.control, (value) => save({ otherSideOneThing: value }));
-
-  const belief = field({
-    id: "belief",
-    label: "걸린 문장",
-    book: "그럴 수 있지",
-    value: daily.beliefToAccept,
-    multiline: true,
-    rows: 2,
-    hint: "힌트는 고르지 않으셔도 됩니다.",
-  });
-  autosave(belief.control, (value) => save({ beliefToAccept: value }));
-
-  const next = field({
-    id: "next-action-input",
-    label: "다음 행동 하나",
-    book: "책임 선택",
-    value: daily.nextAction,
-    multiline: true,
-    rows: 2,
-    placeholder: "지금 내가 고를 수 있는 행동 하나",
-    hint: "책임은 탓이 아니라 통제권을 되찾는 일입니다. 칸은 하나뿐입니다.",
-  });
-  autosave(next.control, (value) => save({ nextAction: value }));
-
-  return el("div", { class: "today-sheet" }, [
-    el("div", { class: "one-line", id: "one-line-block" }, [
-      el("h1", {}, "오늘 한 줄"),
+  const morning = el("article", { class: "leaf leaf-morning", "data-leaf": "morning", "aria-label": "아침" }, [
+    el("header", { class: "leaf-head" }, [
+      mark("sun"),
       el("p", { class: "date-kicker" }, formatKoreanDate(date)),
-      isToday
-        ? null
-        : el("div", { class: "day-nav" }, [
-            link(`/day/${addDays(date, -1)}`, {}, "이전 날"),
-            link("/today", {}, "오늘로"),
-            link(`/day/${addDays(date, 1)}`, {}, "다음 날"),
-          ]),
+    ]),
+    el("blockquote", { class: "leaf-quote" }, quoteFor(date)),
+    el("div", { class: "one-line", id: "one-line-block" }, [
+      el("h1", { class: "book-heading" }, "오늘 한 줄"),
       one,
     ]),
-    el("div", { class: "optional" }, [
-      fold("choice", "오늘의 선택", choiceOpen || guide === "2" || guide === "3", [
-        el("p", { class: "hint" }, "떠오른 감정, 붙잡을 생각, 고르는 선택"),
-        emotion.wrap,
-        thought.wrap,
-        choices.wrap,
-        el("p", { class: "quiet" }, "비워 두셔도 됩니다. 한쪽만 적어도 그날을 탓하지 않습니다."),
-        feeling.wrap,
-        result.wrap,
-        otherWrap,
-      ]),
-      fold("tasks", "하는 일", tasksOpen || guide === "4", [
-        el("p", { class: "hint" }, "행동"),
-        el("p", { class: "quiet" }, "다짐이 아니라 행동으로. 비워 두셔도 됩니다. 어긋나면 다음에 고칠 한 가지만 적으시면 됩니다."),
-        taskEditor({
-          tasks: daily.tasks,
-          withNextFix: true,
-          onChange: (tasks) => save({ tasks }),
-        }),
-      ]),
-      fold("belief", "걸린 문장", beliefOpen, [
-        el("p", { class: "hint" }, "그럴 수 있지"),
-        belief.wrap,
-        phraseChips(BELIEF_PHRASES, belief.control, ctx.note),
-        el("div", { class: "shortcut-row" }, [
-          link(`/worksheet/a/new?daily=${date}`, { class: "text-link" }, "워크시트 A로 더 쓰기"),
-          link(`/worksheet/b/new?daily=${date}`, { class: "text-link" }, "워크시트 B로 더 쓰기"),
-        ]),
-      ]),
-      fold("next-action", "다음 행동 하나", nextOpen, [
-        el("p", { class: "hint" }, "책임 선택"),
-        next.wrap,
-        el("p", { class: "quiet" }, "왜 못했는가는 묻지 않습니다."),
-        link(`/worksheet/c/new?daily=${date}`, { class: "text-link" }, "워크시트 C로 더 쓰기"),
-      ]),
+    ruledLines({
+      id: "grateful",
+      label: "오늘 고마운 것",
+      values: daily.feelingNote,
+      count: 3,
+      onSave: (value) => save({ feelingNote: value }),
+    }),
+    ruledLines({
+      id: "today-choice",
+      label: "오늘을 좋게 할 선택",
+      values: [daily.emotionFelt, daily.thoughtHeld, daily.choices].join("\n"),
+      count: 3,
+      onSave: (value) => {
+        const [emotionFelt, thoughtHeld, choices] = splitLines(value, 3);
+        return save({ emotionFelt, thoughtHeld, choices });
+      },
+    }),
+    ruledLines({
+      id: "belief",
+      label: "오늘 붙잡을 말",
+      values: daily.beliefToAccept,
+      count: 2,
+      onSave: (value) => save({ beliefToAccept: value }),
+    }),
+  ]);
+
+  const taskTexts = (daily.tasks || []).map((task) => task.text);
+  const evening = el("article", { class: "leaf leaf-evening", "data-leaf": "evening", "aria-label": "저녁" }, [
+    el("header", { class: "leaf-head" }, [
+      mark("moon"),
+      el("h1", { class: "book-heading evening-title" }, "저녁"),
     ]),
+    ruledLines({
+      id: "highlights",
+      label: "오늘 괜찮아진 것",
+      values: daily.resultNote,
+      count: 3,
+      onSave: (value) => save({ resultNote: value }),
+    }),
+    ruledLines({
+      id: "learned",
+      label: "오늘 배운 것",
+      values: daily.otherSideOneThing,
+      count: 2,
+      onSave: (value) => save({ otherSideOneThing: value }),
+    }),
+    ruledLines({
+      id: "next-action-input",
+      label: "다음에 고를 한 가지",
+      values: daily.nextAction,
+      count: 2,
+      onSave: (value) => save({ nextAction: value }),
+    }),
+    ruledLines({
+      id: "today-tasks",
+      label: "하는 일",
+      values: taskTexts.join("\n"),
+      count: 3,
+      onSave: (value) => {
+        const texts = splitLines(value, 3);
+        const previous = daily.tasks || [];
+        const tasks = texts.map((text, index) => ({
+          text,
+          nextFix: previous[index]?.nextFix || "",
+        }));
+        return save({ tasks });
+      },
+    }),
     el("p", { class: "quiet-end" }, "며칠을 비워도 오늘부터 다시 오면 됩니다."),
   ]);
-}
 
-function fold(id, title, open, children) {
-  return el("details", { id, open: Boolean(open) }, [el("summary", {}, title), ...children]);
+  const journal = el("div", { class: "journal today-sheet", id: "journal" }, [
+    el("div", { class: "journal-spread" }, [morning, evening]),
+    el("button", { type: "button", class: "page-corner page-corner-prev", "aria-label": "이전 장" }),
+    el("button", { type: "button", class: "page-corner page-corner-next", "aria-label": "다음 장" }),
+  ]);
+
+  bindJournalPages(journal, {
+    date,
+    today: ctx.today,
+    go,
+  });
+
+  return journal;
 }
