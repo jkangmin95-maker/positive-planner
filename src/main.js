@@ -55,6 +55,13 @@ function installGlobals() {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     window.__ppInstallPrompt = event;
+    const button = document.getElementById("install-now");
+    if (button) button.hidden = false;
+  });
+  window.addEventListener("appinstalled", () => {
+    window.__ppInstallPrompt = null;
+    const button = document.getElementById("install-now");
+    if (button) button.hidden = true;
   });
   window.addEventListener("pp-navigate", () => {
     if (window.__ppRender) window.__ppRender();

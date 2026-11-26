@@ -7,7 +7,7 @@ export const SIDE_LINKS = [
   { href: "/month", label: "월간", note: "원리 하나, 구조 한 칸", nav: "month" },
   { href: "/practice", label: "7일 연습", note: "원하는 날만 여셔도 됩니다", nav: "practice" },
   { href: "/guide", label: "사용법", note: "짧은 안내와 공식 카드", nav: "guide" },
-  { href: "/install", label: "홈 화면에 추가", note: "iPhone Safari · Android Chrome", nav: "install" },
+  { href: "/install", label: "홈 화면에 추가", note: "iPhone · Android · PC", nav: "install" },
   { href: "/settings", label: "설정", note: "내보내기, 출발점", nav: "settings" },
 ];
 

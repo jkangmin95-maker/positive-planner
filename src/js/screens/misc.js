@@ -191,7 +191,9 @@ export function renderGuide() {
 }
 
 export function renderInstall() {
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  const ios = /iphone|ipad|ipod/i.test(ua);
+  const android = /android/i.test(ua);
   const safari = el("section", { class: "card" }, [
     el("h2", {}, "iPhone · Safari"),
     el("ol", { class: "steps" }, [
@@ -204,35 +206,55 @@ export function renderInstall() {
   const chrome = el("section", { class: "card" }, [
     el("h2", {}, "Android · Chrome"),
     el("ol", { class: "steps" }, [
-      el("li", {}, "오른쪽 위의 메뉴(⋮)를 누릅니다."),
+      el("li", {}, "오른쪽 위의 점 세 개 메뉴를 누릅니다."),
       el("li", {}, "‘홈 화면에 추가’ 또는 ‘앱 설치’를 누릅니다."),
       el("li", {}, "‘설치’ 또는 ‘추가’를 누릅니다."),
     ]),
   ]);
+  const desktop = el("section", { class: "card" }, [
+    el("h2", {}, "PC · Chrome, Edge"),
+    el("p", { class: "quiet" }, "Windows와 Mac에서 쓰실 수 있습니다."),
+    el("h3", {}, "주소창 아이콘"),
+    el("ol", { class: "steps" }, [
+      el("li", {}, "주소창 오른쪽의 설치 아이콘을 누릅니다."),
+      el("li", {}, "‘설치’를 누릅니다."),
+    ]),
+    el("h3", {}, "메뉴"),
+    el("ol", { class: "steps" }, [
+      el("li", {}, "Chrome은 오른쪽 위 점 세 개 메뉴에서 ‘앱 설치’를 누릅니다."),
+      el("li", {}, "Edge는 오른쪽 위 메뉴에서 ‘앱’을 누르고, ‘이 사이트를 앱으로 설치’를 누릅니다."),
+      el("li", {}, "이어서 ‘설치’를 누릅니다."),
+    ]),
+    el("p", { class: "quiet" }, "아이콘이나 메뉴가 안 보이면, 그 브라우저는 설치를 건너뛰셔도 됩니다."),
+  ]);
   const installButton = el(
     "button",
     {
+      id: "install-now",
       class: "btn",
       hidden: !window.__ppInstallPrompt,
       onclick: async () => {
         const prompt = window.__ppInstallPrompt;
         if (!prompt) return;
         prompt.prompt();
-        await prompt.userChoice;
-        window.__ppInstallPrompt = null;
-        installButton.hidden = true;
+        const choice = await prompt.userChoice;
+        if (choice?.outcome === "accepted") {
+          window.__ppInstallPrompt = null;
+          installButton.hidden = true;
+        }
       },
     },
     "이 기기에 설치하기",
   );
+  const phone = ios ? [safari, chrome] : [chrome, safari];
+  const sections = ios || android ? [...phone, desktop] : [desktop, ...phone];
 
   return el("article", { class: "page" }, [
     el("h1", {}, "홈 화면에 추가"),
-    el("p", {}, "홈 화면에 두면, 브라우저를 찾지 않고 바로 오늘 한 줄을 열 수 있습니다."),
+    el("p", {}, "홈 화면이나 컴퓨터에 두면, 브라우저를 찾지 않고 바로 오늘 한 줄을 열 수 있습니다."),
     installButton,
-    ios ? safari : chrome,
-    ios ? chrome : safari,
-    el("p", { class: "quiet" }, "설치해도 로그인과 기록은 같습니다. 홈 화면의 아이콘을 지워도 계정의 기록은 남습니다."),
+    ...sections,
+    el("p", { class: "quiet" }, "설치해도 로그인과 기록은 같습니다. 아이콘을 지워도 계정의 기록은 남습니다."),
   ]);
 }
 
