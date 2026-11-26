@@ -64,10 +64,11 @@ test("경로는 베이스를 떼고 화면 이름으로 맞춘다", () => {
   assert.equal(matchPath("/nope").name, "missing");
 });
 
-test("공개 설정은 비어 있고 비밀 키는 거절한다", () => {
-  assert.equal(PP_CONFIG.supabaseUrl, "");
-  assert.equal(PP_CONFIG.supabaseAnonKey, "");
-  assert.equal(configStatus(PP_CONFIG).reason, "missing");
+test("공개 설정은 준비되어 있고 비밀 키는 거절한다", () => {
+  assert.equal(PP_CONFIG.supabaseUrl, "https://awhnphwdifwnnfpbusqd.supabase.co");
+  assert.ok(PP_CONFIG.supabaseAnonKey);
+  assert.equal(isSecretKey(PP_CONFIG.supabaseAnonKey), false);
+  assert.equal(configStatus(PP_CONFIG).reason, "ready");
   const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
   const secret = Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64url");
   const anon = Buffer.from(JSON.stringify({ role: "anon" })).toString("base64url");

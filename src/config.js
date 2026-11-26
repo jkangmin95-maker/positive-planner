@@ -12,6 +12,6 @@
  * 저장 후 main에 푸시하면 GitHub Actions가 Pages에 다시 배포합니다.
  */
 export const PP_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://awhnphwdifwnnfpbusqd.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3aG5waHdkaWZ3bm5mcGJ1c3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2NTA0OTQsImV4cCI6MjExMTIyNjQ5NH0.znWEGlzJ2bUF-Z0V3JJ7okRCSaUrJUTekIKHfBVU4bY",
 };
