@@ -1,0 +1,175 @@
+import assert from "node:assert/strict";
+import { readdir, readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { PP_CONFIG } from "../src/config.js";
+import { configStatus, isSecretKey } from "../src/js/configCheck.js";
+import {
+  addDays,
+  formatDateInTimeZone,
+  fourWeekRange,
+  seoulToday,
+  weekDays,
+  weekStart,
+} from "../src/js/dates.js";
+import { applyPhrase, showOtherSide } from "../src/js/rules.js";
+import { matchPath, stripBase } from "../src/js/router.js";
+import { seedSample, SAMPLE_SHEETS } from "../src/js/sample.js";
+import { createStore } from "../src/js/store.js";
+import { hasDailyContent, journalToText } from "../src/js/textExport.js";
+
+test("서울 날짜는 자정을 넘기면 다음 날이다", () => {
+  assert.equal(formatDateInTimeZone(new Date("2026-11-25T15:30:00Z"), "Asia/Seoul"), "2026-11-26");
+  assert.equal(formatDateInTimeZone(new Date("2026-11-25T14:30:00Z"), "Asia/Seoul"), "2026-11-25");
+  assert.match(seoulToday(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("한 주는 월요일에 시작한다", () => {
+  assert.equal(weekStart("2026-11-26"), "2026-11-23");
+  assert.equal(weekStart("2026-11-23"), "2026-11-23");
+  assert.equal(weekStart("2026-11-29"), "2026-11-23");
+  assert.deepEqual(weekDays("2026-11-26")[0], "2026-11-23");
+  assert.equal(weekDays("2026-11-26")[6], "2026-11-29");
+  const range = fourWeekRange("2026-11-26");
+  assert.equal(range.start, addDays("2026-11-23", -21));
+  assert.equal(range.end, "2026-11-29");
+});
+
+test("한쪽만 적었을 때만 다른 쪽 칸을 연다", () => {
+  assert.equal(showOtherSide("편하다", ""), true);
+  assert.equal(showOtherSide("", "나아진다"), true);
+  assert.equal(showOtherSide("", ""), false);
+  assert.equal(showOtherSide("편하다", "나아진다"), false);
+  assert.equal(showOtherSide("  ", "  "), false);
+});
+
+test("이미 적은 문장은 예시가 덮지 않는다", () => {
+  assert.deepEqual(applyPhrase("", "그럴 수 있지."), { value: "그럴 수 있지.", kept: false });
+  assert.deepEqual(applyPhrase("내 문장", "그럴 수 있지."), { value: "내 문장", kept: true });
+});
+
+test("경로는 베이스를 떼고 화면 이름으로 맞춘다", () => {
+  assert.equal(stripBase("/positive-planner/today", "/positive-planner/"), "/today");
+  assert.equal(stripBase("/positive-planner", "/positive-planner/"), "/");
+  const today = matchPath(stripBase("/positive-planner/day/2026-11-26", "/positive-planner/"));
+  assert.equal(today.name, "today");
+  assert.equal(today.params.date, "2026-11-26");
+  const sheet = matchPath("/worksheet/c/new?guide=7");
+  assert.equal(sheet.name, "worksheetEdit");
+  assert.equal(sheet.params.type, "c");
+  assert.equal(sheet.params.id, "new");
+  assert.equal(sheet.query.get("guide"), "7");
+  assert.equal(matchPath("/nope").name, "missing");
+});
+
+test("공개 설정은 비어 있고 비밀 키는 거절한다", () => {
+  assert.equal(PP_CONFIG.supabaseUrl, "");
+  assert.equal(PP_CONFIG.supabaseAnonKey, "");
+  assert.equal(configStatus(PP_CONFIG).reason, "missing");
+  const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
+  const secret = Buffer.from(JSON.stringify({ role: "service_role" })).toString("base64url");
+  const anon = Buffer.from(JSON.stringify({ role: "anon" })).toString("base64url");
+  assert.equal(isSecretKey(`${header}.${secret}.x`), true);
+  assert.equal(isSecretKey("sb_secret_example"), true);
+  assert.equal(configStatus({ supabaseUrl: "https://example.supabase.co", supabaseAnonKey: `${header}.${secret}.x` }).reason, "secret");
+  assert.equal(
+    configStatus({ supabaseUrl: "https://example.supabase.co", supabaseAnonKey: `${header}.${anon}.signature-long` }).ok,
+    true,
+  );
+});
+
+test("미리보기 저장소는 오늘 한 줄과 워크시트 C의 행동 하나를 남긴다", async () => {
+  const store = await createStore({ mode: "preview", userId: `test-${Date.now()}` });
+  await store.patchDaily("2026-11-26", { oneLine: "그럴 수 있지." });
+  const daily = await store.loadDaily("2026-11-26");
+  assert.equal(daily.oneLine, "그럴 수 있지.");
+  const empty = await store.loadDaily("2026-11-25");
+  assert.equal(hasDailyContent(empty), false);
+  const sheet = await store.createWorksheet({ type: "C", entryDate: "2026-11-26" });
+  await store.patchWorksheet(sheet.id, { body: { nextAction: "물 한 잔 마시기" } });
+  const saved = await store.loadWorksheet(sheet.id);
+  assert.equal(saved.body.nextAction, "물 한 잔 마시기");
+  assert.equal(saved.body.reasons, undefined);
+  const exported = await store.exportAll();
+  assert.equal(exported.timezone, "Asia/Seoul");
+  assert.equal(exported.daily.some((day) => day.oneLine === "그럴 수 있지."), true);
+  const text = journalToText(exported);
+  assert.match(text, /오늘 한 줄: 그럴 수 있지\./);
+  assert.equal(text.includes("미작성"), false);
+});
+
+test("예시 데이터는 오늘 한 줄과 워크시트 셋을 채운다", async () => {
+  const store = await createStore({ mode: "preview", userId: `sample-${Date.now()}` });
+  await seedSample(store, "2026-11-26");
+  const daily = await store.loadDaily("2026-11-26");
+  assert.equal(daily.oneLine, "그럴 수 있지.");
+  assert.equal(daily.nextAction, "물 한 잔 마시고 창을 연다.");
+  const sheet = await store.loadWorksheet(SAMPLE_SHEETS.C);
+  assert.equal(sheet.body.nextAction, "물 한 잔 마시고 창을 연다.");
+  assert.equal(sheet.body.reasons, undefined);
+});
+
+test("SQL은 본인 행만 열고 anon에는 권한을 주지 않는다", async () => {
+  const sql = await readFile("supabase/migrations/20261126120000_init_planner.sql", "utf8");
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /\(select auth\.uid\(\)\) = user_id/);
+  assert.match(sql, /with check \(\(select auth\.uid\(\)\) = user_id\)/);
+  assert.match(sql, /to authenticated/);
+  assert.match(sql, /revoke all on table %I\.%I from public, anon/);
+  assert.doesNotMatch(sql, /grant\s+.*service_role/i);
+  assert.doesNotMatch(sql, /using \(true\)/);
+  for (const table of ["daily_entries", "weekly_entries", "monthly_entries", "worksheets", "reviews", "start_points"]) {
+    assert.match(sql, new RegExp(table));
+  }
+});
+
+test("화면 문구는 빈칸을 실패로 세지 않는다", async () => {
+  const files = await walk("src");
+  const banned = [/스트릭/, /미작성/, /미완성/, /낙제/, /벌점/, /랭킹/, /0\s*\/\s*7/, /채움\s*%/, /연속\s*일수/, /돌아왔/, /축하합니다/];
+  const required = [
+    "오늘 한 줄",
+    "이 한 줄이면 충분합니다",
+    "며칠을 비워도 오늘부터 다시 오면 됩니다",
+    "다음에 고칠 한 가지",
+    "통제권을 되찾는 일",
+    "홈 화면에 추가",
+    "그럴 수 있지",
+    "고정관념 전환",
+    "책임 선택",
+    "7일 연습",
+    "자동으로 이어지지 않습니다",
+    "하나 배운 거지",
+    "빈칸은 실패가 아닙니다",
+    "왜 못했는가는 묻지 않습니다",
+  ];
+  const corpus = [];
+  for (const file of files) {
+    const text = await readFile(file, "utf8");
+    corpus.push(text);
+    const lines = text.split("\n");
+    lines.forEach((line, index) => {
+      for (const pattern of banned) {
+        assert.equal(pattern.test(line), false, `${file}:${index + 1} ${pattern} ${line.trim()}`);
+      }
+      if (line.includes("실패") && !/아닙니다|두지|않습니다|없습니다/.test(line)) {
+        assert.fail(`${file}:${index + 1} 실패가 부정 없이 쓰였습니다: ${line.trim()}`);
+      }
+      if (/왜 못했/.test(line) && !/묻지 않/.test(line)) {
+        assert.fail(`${file}:${index + 1} 추궁 문구: ${line.trim()}`);
+      }
+    });
+  }
+  const all = corpus.join("\n");
+  for (const phrase of required) assert.equal(all.includes(phrase), true, phrase);
+});
+
+async function walk(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...(await walk(full)));
+    else if (/\.(js|css|html|md)$/.test(entry.name)) files.push(full);
+  }
+  return files;
+}

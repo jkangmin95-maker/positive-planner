@@ -1,0 +1,21 @@
+{
+  "name": "positive-planner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "긍정학개론을 연습하는 모바일 우선 PWA",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "node --test tests/unit.test.mjs",
+    "icons": "python3 scripts/make-icons.py",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.86.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "puppeteer-core": "^24.15.0"
+  }
+}
