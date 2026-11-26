@@ -41,10 +41,19 @@ await writeFile("dist/sw.js", sw);
 await mkdir("dist/fonts", { recursive: true });
 await cp("src/fonts/PositiveSerif-Title.woff", "dist/fonts/PositiveSerif-Title.woff");
 await cp("src/fonts/OFL-PositiveSerif-Title.txt", "dist/fonts/OFL-PositiveSerif-Title.txt");
+await cp("src/fonts/SongMyung-Book.woff2", "dist/fonts/SongMyung-Book.woff2");
+await cp("src/fonts/BrushTitle.woff2", "dist/fonts/BrushTitle.woff2");
+await cp("src/fonts/OFL-SongMyung.txt", "dist/fonts/OFL-SongMyung.txt");
+await cp("src/fonts/OFL-BrushTitle.txt", "dist/fonts/OFL-BrushTitle.txt");
 await mkdir("dist/textures", { recursive: true });
 await cp("src/textures/cover.webp", "dist/textures/cover.webp");
 await cp("src/textures/cover.jpg", "dist/textures/cover.jpg");
-await cp("src/textures/paper-faint.jpg", "dist/textures/paper-faint.jpg");
+await cp("src/textures/cover-wide.webp", "dist/textures/cover-wide.webp");
+await cp("src/textures/cover-wide.jpg", "dist/textures/cover-wide.jpg");
+await cp("src/textures/desk.webp", "dist/textures/desk.webp");
+await cp("src/textures/desk.jpg", "dist/textures/desk.jpg");
+await cp("src/textures/parchment.webp", "dist/textures/parchment.webp");
+await cp("src/textures/parchment.jpg", "dist/textures/parchment.jpg");
 await cp("src/icons", "dist/icons", { recursive: true });
 await writeFile("dist/.nojekyll", "");
 
@@ -59,9 +68,13 @@ for (const file of [
   "dist/icons/icon-512.png",
   "dist/icons/icon-maskable-512.png",
   "dist/fonts/PositiveSerif-Title.woff",
+  "dist/fonts/SongMyung-Book.woff2",
+  "dist/fonts/BrushTitle.woff2",
   "dist/textures/cover.webp",
   "dist/textures/cover.jpg",
-  "dist/textures/paper-faint.jpg",
+  "dist/textures/cover-wide.webp",
+  "dist/textures/desk.webp",
+  "dist/textures/parchment.webp",
 ]) {
   if (!existsSync(file)) throw new Error(`없는 파일: ${file}`);
 }
