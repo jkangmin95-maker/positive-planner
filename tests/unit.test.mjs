@@ -17,6 +17,7 @@ import { matchPath, stripBase } from "../src/js/router.js";
 import { seedSample, SAMPLE_SHEETS } from "../src/js/sample.js";
 import { createStore } from "../src/js/store.js";
 import { toDailyRow, toReviewRow, toWeeklyRow, toWorksheetRow } from "../src/js/rows.js";
+import { installIsMobile } from "../src/js/screens/misc.js";
 import { hasDailyContent, journalToText } from "../src/js/textExport.js";
 
 test("서울 날짜는 자정을 넘기면 다음 날이다", () => {
@@ -132,6 +133,16 @@ test("SQL은 본인 행만 열고 anon에는 권한을 주지 않는다", async 
   const startPoints = sql.match(/create table if not exists public\.start_points \([\s\S]*?\);/)[0];
   assert.doesNotMatch(monthly, /created_at/);
   assert.doesNotMatch(startPoints, /created_at/);
+});
+
+test("설치 안내는 좁은 화면에서 아이폰을 먼저 둔다", () => {
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0 (iPhone)", viewportWidth: 390 }), true);
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0 (Linux; Android 14)", viewportWidth: 800 }), true);
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0", coarse: true, viewportWidth: 1280 }), true);
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0", coarse: false, viewportWidth: 390 }), true);
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0", coarse: false, viewportWidth: 1280 }), false);
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0", coarse: false, viewportWidth: 767 }), true);
+  assert.equal(installIsMobile({ userAgent: "Mozilla/5.0", coarse: false, viewportWidth: 768 }), false);
 });
 
 test("저장 요청은 created_at을 덮어쓰지 않는다", () => {

@@ -190,10 +190,21 @@ export function renderGuide() {
   ]);
 }
 
+export function installIsMobile({ userAgent = "", coarse = false, viewportWidth = 1024 } = {}) {
+  if (/iphone|ipad|ipod|android/i.test(userAgent)) return true;
+  if (coarse) return true;
+  return viewportWidth < 768;
+}
+
+function currentInstallIsMobile() {
+  return installIsMobile({
+    userAgent: navigator.userAgent,
+    coarse: window.matchMedia("(pointer: coarse)").matches,
+    viewportWidth: window.innerWidth,
+  });
+}
+
 export function renderInstall() {
-  const ua = navigator.userAgent;
-  const ios = /iphone|ipad|ipod/i.test(ua);
-  const android = /android/i.test(ua);
   const safari = el("section", { class: "card" }, [
     el("h2", {}, "iPhone · Safari"),
     el("ol", { class: "steps" }, [
@@ -246,14 +257,30 @@ export function renderInstall() {
     },
     "이 기기에 설치하기",
   );
-  const phone = ios ? [safari, chrome] : [chrome, safari];
-  const sections = ios || android ? [...phone, desktop] : [desktop, ...phone];
+  const sections = el("div", { class: "stack" });
+  const place = () => {
+    if (!sections.isConnected && sections.childNodes.length) return;
+    const ordered = currentInstallIsMobile() ? [safari, chrome, desktop] : [desktop, chrome, safari];
+    sections.replaceChildren(...ordered);
+  };
+  place();
+  if (window.__ppInstallLayout) {
+    window.removeEventListener("resize", window.__ppInstallLayout);
+    window.__ppInstallCoarse?.removeEventListener?.("change", window.__ppInstallLayout);
+  }
+  window.__ppInstallLayout = () => {
+    if (!sections.isConnected) return;
+    place();
+  };
+  window.__ppInstallCoarse = window.matchMedia("(pointer: coarse)");
+  window.addEventListener("resize", window.__ppInstallLayout);
+  window.__ppInstallCoarse.addEventListener?.("change", window.__ppInstallLayout);
 
   return el("article", { class: "page" }, [
     el("h1", {}, "홈 화면에 추가"),
     el("p", {}, "홈 화면이나 컴퓨터에 두면, 브라우저를 찾지 않고 바로 오늘 한 줄을 열 수 있습니다."),
     installButton,
-    ...sections,
+    sections,
     el("p", { class: "quiet" }, "설치해도 로그인과 기록은 같습니다. 아이콘을 지워도 계정의 기록은 남습니다."),
   ]);
 }
