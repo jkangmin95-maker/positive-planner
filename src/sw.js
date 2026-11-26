@@ -1,5 +1,5 @@
 /* 앱 껍데기만 캐시합니다. 기록 본문은 캐시에 넣지 않습니다. */
-const CACHE = "positive-planner-__BUILD_ID__";
+const CACHE = "positive-planner-premium-__BUILD_ID__";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,11 +11,10 @@ const ASSETS = [
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png",
   "./icons/favicon-32.png",
-  "./fonts/nanum-myeongjo-korean-400-normal.woff2",
-  "./fonts/nanum-myeongjo-latin-400-normal.woff2",
-  "./fonts/nanum-gothic-korean-400-normal.woff2",
-  "./fonts/nanum-gothic-korean-700-normal.woff2",
-  "./fonts/nanum-gothic-latin-400-normal.woff2",
+  "./fonts/PositiveSerif-Title.woff",
+  "./textures/cover.webp",
+  "./textures/cover.jpg",
+  "./textures/paper-faint.jpg",
 ];
 
 self.addEventListener("install", (event) => {

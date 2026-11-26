@@ -14,8 +14,7 @@ export const SIDE_LINKS = [
 export const MORE_LINKS = SIDE_LINKS.filter((item) => item.nav !== "today" && item.nav !== "week");
 
 export function tabFor(name) {
-  if (name === "today") return "today";
+  if (name === "today" || name === "home") return "today";
   if (name === "week") return "week";
-  if (name === "home") return "";
   return "more";
 }
