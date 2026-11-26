@@ -3,7 +3,7 @@ import { configStatus } from "./js/configCheck.js";
 import { el, link } from "./js/dom.js";
 import { currentRoute, go } from "./js/router.js";
 import { createStore } from "./js/store.js";
-import { closeSheet, guideBanner, markNav, mountShell } from "./js/shell.js";
+import { closeSheet, guideBanner, markNav, mountShell, setEntryChrome } from "./js/shell.js";
 import { renderScreen } from "./js/render.js";
 import { seoulToday } from "./js/dates.js";
 import { GUIDES } from "./js/guides.js";
@@ -149,6 +149,7 @@ async function startApp({ mode, userId, supabase = null, sample = false }) {
       if (guide) banner.append(guideBanner(guideId));
     }
     markNav(route.name);
+    setEntryChrome(route.name);
     const view = document.getElementById("view");
     try {
       const screen = await renderScreen(ctx, route);

@@ -10,6 +10,10 @@ export function closeSheet() {
   dismiss();
 }
 
+export function setEntryChrome(routeName) {
+  document.body.classList.toggle("on-entry", routeName === "home" || routeName === "today");
+}
+
 export function markNav(name) {
   const tab = tabFor(name);
   document.querySelectorAll("[data-nav]").forEach((node) => {

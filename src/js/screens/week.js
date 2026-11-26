@@ -17,7 +17,6 @@ export async function renderWeek(ctx, route) {
     const item = field({
       id: key,
       label: `이번 주 선택 ${index + 1}`,
-      optional: true,
       value: week[key],
       placeholder: index === 0 ? "한 가지만 있어도 됩니다" : "",
     });
@@ -27,7 +26,6 @@ export async function renderWeek(ctx, route) {
   const feeling = field({
     id: "week-feeling",
     label: "기분이 편해지는지",
-    optional: true,
     value: week.feelingNote,
     multiline: true,
     rows: 2,
@@ -36,7 +34,6 @@ export async function renderWeek(ctx, route) {
   const result = field({
     id: "week-result",
     label: "결과도 나아지는지",
-    optional: true,
     value: week.resultNote,
     multiline: true,
     rows: 2,
@@ -45,7 +42,6 @@ export async function renderWeek(ctx, route) {
     id: "week-next",
     label: "다음에 고칠 한 가지",
     book: "하나 배운 거지",
-    optional: true,
     value: week.nextFix,
     multiline: true,
     rows: 2,
@@ -53,7 +49,6 @@ export async function renderWeek(ctx, route) {
   const review = field({
     id: "week-review",
     label: "주간 회고",
-    optional: true,
     value: week.review,
     multiline: true,
     rows: 4,
@@ -74,14 +69,14 @@ export async function renderWeek(ctx, route) {
     el("p", { class: "quiet" }, "일간을 비운 날이 있어도 주간은 그대로 둡니다."),
     el("div", { class: "day-nav" }, [prev, isThisWeek ? null : link("/week", {}, "이번 주"), next]),
     el("section", { class: "card" }, [
-      sectionTitle("h2", "이번 주 선택", "", true),
+      sectionTitle("h2", "이번 주 선택", "", false),
       el("p", { class: "quiet" }, "한 가지만 있어도 됩니다."),
       ...choiceFields,
       feeling.wrap,
       result.wrap,
     ]),
     el("section", { class: "card" }, [
-      sectionTitle("h2", "하는 일", "행동", true),
+      sectionTitle("h2", "하는 일", "행동", false),
       taskEditor({
         tasks: week.tasks,
         withNextFix: false,
@@ -102,9 +97,9 @@ export async function renderWeek(ctx, route) {
         }),
       ),
     ]),
-    el("section", { class: "card" }, [sectionTitle("h2", "다음에 고칠 한 가지", "하나 배운 거지", true), nextFix.wrap]),
+    el("section", { class: "card" }, [sectionTitle("h2", "다음에 고칠 한 가지", "하나 배운 거지", false), nextFix.wrap]),
     el("section", { id: "review", class: "card anchor" }, [
-      sectionTitle("h2", "주간 회고", "", true),
+      sectionTitle("h2", "주간 회고", "", false),
       review.wrap,
     ]),
   ]);

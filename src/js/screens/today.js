@@ -9,6 +9,12 @@ export async function renderToday(ctx, route) {
   const date = requested && isIsoDate(requested) ? requested : ctx.today;
   const daily = await ctx.store.loadDaily(date);
   const isToday = date === ctx.today;
+  const guide = route.query.get("guide") || "";
+  const hasText = (value) => String(value || "").trim().length > 0;
+  const choiceOpen = [daily.emotionFelt, daily.thoughtHeld, daily.choices, daily.feelingNote, daily.resultNote, daily.otherSideOneThing].some(hasText);
+  const tasksOpen = (daily.tasks || []).some((task) => hasText(task.text) || hasText(task.nextFix));
+  const beliefOpen = hasText(daily.beliefToAccept);
+  const nextOpen = hasText(daily.nextAction);
   const save = (partial) => ctx.store.patchDaily(date, partial).then(ctx.setStatus);
 
   const one = field({
@@ -29,7 +35,6 @@ export async function renderToday(ctx, route) {
     id: "emotion",
     label: "떠오른 감정",
     book: "감정은 떠오를 수 있음",
-    optional: true,
     value: daily.emotionFelt,
     multiline: true,
     rows: 2,
@@ -38,7 +43,6 @@ export async function renderToday(ctx, route) {
     id: "thought",
     label: "붙잡을 생각",
     book: "붙잡는 것은 선택",
-    optional: true,
     value: daily.thoughtHeld,
     multiline: true,
     rows: 2,
@@ -47,7 +51,6 @@ export async function renderToday(ctx, route) {
     id: "choices",
     label: "고르는 선택",
     book: "긍정",
-    optional: true,
     value: daily.choices,
     multiline: true,
     rows: 2,
@@ -55,7 +58,6 @@ export async function renderToday(ctx, route) {
   const feeling = field({
     id: "feeling",
     label: "기분이 편해지는지",
-    optional: true,
     value: daily.feelingNote,
     multiline: true,
     rows: 2,
@@ -64,7 +66,6 @@ export async function renderToday(ctx, route) {
   const result = field({
     id: "result",
     label: "결과도 나아지는지",
-    optional: true,
     value: daily.resultNote,
     multiline: true,
     rows: 2,
@@ -72,7 +73,6 @@ export async function renderToday(ctx, route) {
   const other = field({
     id: "other-side",
     label: "다른 쪽을 위한 작은 한 가지",
-    optional: true,
     value: daily.otherSideOneThing,
     multiline: true,
     rows: 2,
@@ -100,7 +100,6 @@ export async function renderToday(ctx, route) {
     id: "belief",
     label: "걸린 문장",
     book: "그럴 수 있지",
-    optional: true,
     value: daily.beliefToAccept,
     multiline: true,
     rows: 2,
@@ -112,7 +111,6 @@ export async function renderToday(ctx, route) {
     id: "next-action-input",
     label: "다음 행동 하나",
     book: "책임 선택",
-    optional: true,
     value: daily.nextAction,
     multiline: true,
     rows: 2,
@@ -143,8 +141,7 @@ export async function renderToday(ctx, route) {
       el("p", { class: "enough" }, "이 한 줄이면 충분합니다."),
       phraseChips(ONE_LINE_PHRASES, one.control, ctx.note),
     ]),
-    el("section", { id: "choice", class: "card anchor" }, [
-      sectionTitle("h2", "오늘의 선택", "", true),
+    fold("choice", "오늘의 선택", "", choiceOpen || guide === "2" || guide === "3", [
       emotion.wrap,
       thought.wrap,
       choices.wrap,
@@ -153,8 +150,7 @@ export async function renderToday(ctx, route) {
       result.wrap,
       otherWrap,
     ]),
-    el("section", { id: "tasks", class: "card anchor" }, [
-      sectionTitle("h2", "하는 일", "행동", true),
+    fold("tasks", "하는 일", "행동", tasksOpen || guide === "4", [
       el("p", { class: "quiet" }, "다짐이 아니라 행동으로. 비워 두셔도 됩니다. 어긋나면 다음에 고칠 한 가지만 적으시면 됩니다."),
       taskEditor({
         tasks: daily.tasks,
@@ -162,8 +158,7 @@ export async function renderToday(ctx, route) {
         onChange: (tasks) => save({ tasks }),
       }),
     ]),
-    el("section", { id: "belief", class: "card anchor" }, [
-      sectionTitle("h2", "걸린 문장", "그럴 수 있지", true),
+    fold("belief", "걸린 문장", "그럴 수 있지", beliefOpen, [
       belief.wrap,
       phraseChips(BELIEF_PHRASES, belief.control, ctx.note),
       el("div", { class: "shortcut-row" }, [
@@ -171,8 +166,7 @@ export async function renderToday(ctx, route) {
         link(`/worksheet/b/new?daily=${date}`, { class: "text-link" }, "워크시트 B로 더 쓰기"),
       ]),
     ]),
-    el("section", { id: "next-action", class: "card anchor" }, [
-      sectionTitle("h2", "다음 행동 하나", "책임 선택", true),
+    fold("next-action", "다음 행동 하나", "책임 선택", nextOpen, [
       next.wrap,
       el("p", { class: "quiet" }, "왜 못했는가는 묻지 않습니다."),
       link(`/worksheet/c/new?daily=${date}`, { class: "text-link" }, "워크시트 C로 더 쓰기"),
@@ -184,5 +178,12 @@ export async function renderToday(ctx, route) {
       link("/worksheet/c", {}, "C 책임 선택"),
       link("/guide#phrases", {}, "공식 카드"),
     ]),
+  ]);
+}
+
+function fold(id, title, book, open, children) {
+  return el("details", { id, class: "fold card anchor", open: Boolean(open) }, [
+    el("summary", {}, sectionTitle("span", title, book, false)),
+    ...children,
   ]);
 }

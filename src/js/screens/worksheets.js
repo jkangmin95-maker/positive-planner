@@ -42,7 +42,6 @@ export async function renderWorksheetHome() {
 function sheetLink(type) {
   const meta = META[type];
   return link(`/worksheet/${type.toLowerCase()}`, { class: "menu-card" }, [
-    el("span", { class: "badge" }, "선택"),
     el("span", { class: "menu-title" }, meta.title),
     el("span", { class: "quiet" }, meta.sub),
   ]);
@@ -145,7 +144,6 @@ function fieldsFor(type, body, saveKey, ctx) {
     const item = field({
       id: `sheet-${key}`,
       label,
-      optional: true,
       value: body[key] || "",
       multiline: true,
       rows: extra.rows || 3,
@@ -153,9 +151,6 @@ function fieldsFor(type, body, saveKey, ctx) {
       hint: extra.hint || "",
       book: extra.book || "",
     });
-    if (key === "nextAction" && type === "C") {
-      item.wrap.querySelector(".badge")?.remove();
-    }
     autosave(item.control, (value) => saveKey(key, value));
     return item;
   };
