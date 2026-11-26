@@ -3,7 +3,7 @@ import { configStatus } from "./js/configCheck.js";
 import { el, link } from "./js/dom.js";
 import { currentRoute, go } from "./js/router.js";
 import { createStore } from "./js/store.js";
-import { closeSheet, guideBanner, markNav, mountShell, setEntryChrome } from "./js/shell.js";
+import { closeSheet, guideBanner, markNav, mountShell, setEntryChrome, syncCover, viewRoot } from "./js/shell.js";
 import { renderScreen } from "./js/render.js";
 import { seoulToday } from "./js/dates.js";
 import { GUIDES } from "./js/guides.js";
@@ -150,7 +150,7 @@ async function startApp({ mode, userId, supabase = null, sample = false }) {
     }
     markNav(route.name);
     setEntryChrome(route.name);
-    const view = document.getElementById("view");
+    const view = viewRoot(route.name);
     try {
       const screen = await renderScreen(ctx, route);
       if (token !== renderToken) return;
@@ -162,11 +162,12 @@ async function startApp({ mode, userId, supabase = null, sample = false }) {
         el("p", { class: "quiet" }, "이 화면을 여는 데 문제가 있었습니다. 오늘 한 줄은 아래 버튼으로 쓰실 수 있습니다."),
       );
     }
+    syncCover(route);
     const anchor = (location.hash || "").replace("#", "") || guide?.anchor || "";
     const target = anchor ? document.getElementById(anchor) : null;
     if (target) target.scrollIntoView({ block: "start" });
-    else window.scrollTo(0, 0);
-    view?.focus({ preventScroll: true });
+    else if (!document.body.classList.contains("book-mode")) window.scrollTo(0, 0);
+    if (!document.body.classList.contains("book-mode")) view?.focus({ preventScroll: true });
   }
 
   window.__ppRender = () => {

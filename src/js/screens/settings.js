@@ -2,6 +2,7 @@ import { confirmDialog, downloadText, el, link } from "../dom.js";
 import { autosave, field, sectionTitle } from "../fields.js";
 import { journalToText } from "../textExport.js";
 import { go } from "../router.js";
+import { clearOpened } from "../cover.js";
 
 export async function renderSettings(ctx) {
   const start = await ctx.store.loadStartPoint();
@@ -88,6 +89,22 @@ export async function renderSettings(ctx) {
       el("p", {}, "웹과 종이는 자동으로 이어지지 않습니다. 본문은 한쪽에만 적고, 다른 쪽은 오늘 한 줄이면 됩니다."),
       link("/install", { class: "text-link" }, "홈 화면에 추가"),
       link("/guide", { class: "text-link" }, "사용법"),
+    ]),
+    el("section", { class: "card" }, [
+      el("h2", {}, "표지 다시 보기"),
+      el("p", { class: "quiet" }, "다음에 열면 표지부터 다시 보여 줍니다. 기록은 그대로입니다."),
+      el(
+        "button",
+        {
+          class: "btn secondary",
+          onclick: () => {
+            clearOpened();
+            ctx.note("다음 방문에 표지를 다시 보여 줍니다.");
+            go("/?cover=1");
+          },
+        },
+        "표지 다시 보기",
+      ),
     ]),
     el("section", { class: "card" }, [
       el("h2", {}, "기록 지우기"),

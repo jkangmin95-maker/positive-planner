@@ -18,6 +18,7 @@ import { seedSample, SAMPLE_SHEETS } from "../src/js/sample.js";
 import { createStore } from "../src/js/store.js";
 import { toDailyRow, toReviewRow, toWeeklyRow, toWorksheetRow } from "../src/js/rows.js";
 import { installIsMobile } from "../src/js/screens/misc.js";
+import { shouldShowCover, hasOpened, markOpened, clearOpened, OPENED_KEY } from "../src/js/cover.js";
 import { hasDailyContent, journalToText } from "../src/js/textExport.js";
 
 test("서울 날짜는 자정을 넘기면 다음 날이다", () => {
@@ -221,3 +222,26 @@ async function walk(dir) {
   }
   return files;
 }
+
+test("첫 방문만 표지를 보여주고 재방문은 바로 펼친다", () => {
+  const memory = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => (memory.has(key) ? memory.get(key) : null),
+    setItem: (key, value) => memory.set(key, String(value)),
+    removeItem: (key) => memory.delete(key),
+  };
+  clearOpened();
+  assert.equal(hasOpened(), false);
+  assert.equal(shouldShowCover(new URLSearchParams()), true);
+  markOpened();
+  assert.equal(hasOpened(), true);
+  assert.equal(shouldShowCover(new URLSearchParams()), false);
+  assert.equal(shouldShowCover(new URLSearchParams("cover=1")), true);
+  assert.equal(shouldShowCover(new URLSearchParams("visit=first")), true);
+  assert.equal(shouldShowCover(new URLSearchParams("opened=1")), false);
+  assert.equal(shouldShowCover(new URLSearchParams("visit=return")), false);
+  clearOpened();
+  assert.equal(hasOpened(), false);
+  assert.equal(shouldShowCover(new URLSearchParams()), true);
+  assert.equal(OPENED_KEY, "pp.hasOpened");
+});

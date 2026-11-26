@@ -11,11 +11,9 @@ const ASSETS = [
   "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png",
   "./icons/favicon-32.png",
-  "./fonts/nanum-myeongjo-korean-400-normal.woff2",
-  "./fonts/nanum-myeongjo-latin-400-normal.woff2",
-  "./fonts/nanum-gothic-korean-400-normal.woff2",
-  "./fonts/nanum-gothic-korean-700-normal.woff2",
-  "./fonts/nanum-gothic-latin-400-normal.woff2",
+  "./fonts/PositiveSerif-Title.woff",
+  "./textures/cloth-clay.jpg",
+  "./textures/foil-sheen.jpg",
 ];
 
 self.addEventListener("install", (event) => {

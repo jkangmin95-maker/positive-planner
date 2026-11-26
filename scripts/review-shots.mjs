@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
 import { SAMPLE_SHEETS } from "../src/js/sample.js";
@@ -9,8 +10,9 @@ const outDir = "/opt/cursor/artifacts";
 
 const shots = [
   ["login", `/?preview=auth`, "h1"],
-  ["home", `/?preview=1&sample=1`, "textarea[name=oneLine]"],
-  ["today", `/today?preview=1&sample=1`, "#next-action"],
+  ["cover", `/?preview=1&cover=1&cue=0`, "#cover"],
+  ["home", `/?preview=1&sample=1&opened=1`, "textarea#one-line"],
+  ["today", `/today?preview=1&sample=1&opened=1`, "#next-action"],
   ["week", `/week?preview=1&sample=1`, "#review"],
   ["worksheet-a", `/worksheet/a/${SAMPLE_SHEETS.A}?preview=1&sample=1`, "#sheet-fact"],
   ["worksheet-b", `/worksheet/b/${SAMPLE_SHEETS.B}?preview=1&sample=1`, "#sheet-fixedBelief"],
@@ -26,7 +28,7 @@ const server = spawn("node", ["scripts/serve.mjs"], {
 
 await waitForServer();
 const browser = await puppeteer.launch({
-  executablePath: "/usr/local/bin/google-chrome",
+  executablePath: existsSync("/usr/local/bin/google-chrome") ? "/usr/local/bin/google-chrome" : "/usr/bin/google-chrome",
   headless: true,
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
@@ -44,7 +46,7 @@ try {
       await page.waitForSelector(selector);
       await page.evaluate(() => document.fonts.ready);
       if (name === "home") {
-        await page.waitForFunction(() => document.querySelector("textarea[name=oneLine]")?.value === "그럴 수 있지.");
+        await page.waitForFunction(() => document.querySelector("textarea#one-line")?.value === "그럴 수 있지.");
       }
       const height = await page.evaluate(() => document.documentElement.scrollHeight);
       const minHeight = width === 390 ? 844 : 900;

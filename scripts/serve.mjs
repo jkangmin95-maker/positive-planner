@@ -13,6 +13,9 @@ const types = {
   ".webmanifest": "application/manifest+json",
   ".png": "image/png",
   ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
   ".txt": "text/plain; charset=utf-8",
 };
 

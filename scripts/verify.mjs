@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
 
@@ -13,7 +14,7 @@ const server = spawn("node", ["scripts/serve.mjs"], {
 await waitForServer();
 
 const browser = await puppeteer.launch({
-  executablePath: "/usr/local/bin/google-chrome",
+  executablePath: existsSync("/usr/local/bin/google-chrome") ? "/usr/local/bin/google-chrome" : "/usr/bin/google-chrome",
   headless: true,
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
@@ -39,18 +40,33 @@ try {
     problems.push("Google 로그인이 없습니다");
   }
 
-  await shot(page, `${origin}?preview=1`, "03-home.png", "textarea[name=oneLine]");
-  await page.type("textarea[name=oneLine]", "그럴 수 있지.");
+  await shot(page, `${origin}?preview=1&cover=1`, "00-cover.png", "#cover");
+  const coverText = await page.evaluate(() => document.querySelector("#cover")?.innerText || "");
+  if (/눌러|탭|펼치|tap to open/i.test(coverText)) problems.push(`표지에 안내 문구가 있습니다: ${coverText}`);
+  if (!coverText.includes("긍정플래너") || !coverText.includes("긍정학개론")) {
+    problems.push("표지 제목이 없습니다");
+  }
+  await page.click("#cover");
+  await page.waitForSelector("textarea#one-line:not([disabled])");
+  await page.waitForFunction(() => document.querySelector("#book")?.classList.contains("is-flat"));
+
+  await shot(page, `${origin}?preview=1&opened=1`, "03-home.png", "textarea#one-line");
+  await page.type("textarea#one-line", "그럴 수 있지.");
   await page.waitForFunction(() => document.querySelector("#save-status")?.textContent?.includes("저장"));
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForSelector("textarea[name=oneLine]");
-  const kept = await page.$eval("textarea[name=oneLine]", (node) => node.value);
+  await page.waitForSelector("textarea#one-line");
+  const kept = await page.$eval("textarea#one-line", (node) => node.value);
   if (kept !== "그럴 수 있지.") problems.push(`새로고침 뒤 한 줄이 사라졌습니다: ${kept}`);
 
-  await open(page, "/today?preview=1");
+  await open(page, "/today?preview=1&opened=1");
   await page.waitForSelector("#one-line");
-  if (!(await page.evaluate(() => document.body.innerText.includes("이 한 줄이면 충분합니다")))) {
+  const todayText = await page.evaluate(() => document.body.innerText);
+  const placeholder = await page.$eval("textarea#one-line", (node) => node.getAttribute("placeholder") || "");
+  if (!placeholder.includes("한 줄이면 충분합니다") && !todayText.includes("한 줄이면 충분합니다")) {
     problems.push("오늘 화면에 충분 문구가 없습니다");
+  }
+  if (!todayText.includes("며칠을 비워도 오늘부터 다시 오면 됩니다")) {
+    problems.push("오늘 화면에 복귀 안내가 없습니다");
   }
   await page.type("#feeling", "조금 편안하다");
   await page.waitForFunction(() => !document.querySelector("#other-side")?.parentElement?.hidden);

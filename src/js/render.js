@@ -10,7 +10,7 @@ import { renderGuide, renderInstall, renderMissing, renderMore, renderPractice }
 export function renderScreen(ctx, route) {
   switch (route.name) {
     case "home":
-      return renderHome(ctx);
+      return renderHome(ctx, route);
     case "today":
       return renderToday(ctx, route);
     case "week":

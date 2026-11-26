@@ -39,6 +39,7 @@ const sw = (await readFile("src/sw.js", "utf8")).replaceAll("__BUILD_ID__", buil
 await writeFile("dist/sw.js", sw);
 
 await cp("src/fonts", "dist/fonts", { recursive: true });
+await cp("src/textures", "dist/textures", { recursive: true });
 await cp("src/icons", "dist/icons", { recursive: true });
 await writeFile("dist/.nojekyll", "");
 
@@ -52,7 +53,9 @@ for (const file of [
   "dist/icons/icon-192.png",
   "dist/icons/icon-512.png",
   "dist/icons/icon-maskable-512.png",
-  "dist/fonts/nanum-gothic-korean-400-normal.woff2",
+  "dist/fonts/PositiveSerif-Title.woff",
+  "dist/textures/cloth-clay.jpg",
+  "dist/textures/foil-sheen.jpg",
 ]) {
   if (!existsSync(file)) throw new Error(`없는 파일: ${file}`);
 }
