@@ -42,7 +42,8 @@ await mkdir("dist/fonts", { recursive: true });
 await cp("src/fonts/PositiveSerif-Title.woff", "dist/fonts/PositiveSerif-Title.woff");
 await cp("src/fonts/OFL-PositiveSerif-Title.txt", "dist/fonts/OFL-PositiveSerif-Title.txt");
 await mkdir("dist/textures", { recursive: true });
-await cp("src/textures/cloth-clay.jpg", "dist/textures/cloth-clay.jpg");
+await cp("src/textures/cover.webp", "dist/textures/cover.webp");
+await cp("src/textures/cover.jpg", "dist/textures/cover.jpg");
 await cp("src/textures/paper-faint.jpg", "dist/textures/paper-faint.jpg");
 await cp("src/icons", "dist/icons", { recursive: true });
 await writeFile("dist/.nojekyll", "");
@@ -58,7 +59,8 @@ for (const file of [
   "dist/icons/icon-512.png",
   "dist/icons/icon-maskable-512.png",
   "dist/fonts/PositiveSerif-Title.woff",
-  "dist/textures/cloth-clay.jpg",
+  "dist/textures/cover.webp",
+  "dist/textures/cover.jpg",
   "dist/textures/paper-faint.jpg",
 ]) {
   if (!existsSync(file)) throw new Error(`없는 파일: ${file}`);

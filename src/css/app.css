@@ -29,6 +29,7 @@
   --cloth: #8f3d2b;
   --foil: #f3e6c8;
   --endpaper: #fbf6ee;
+  --cover-fall: #120c08;
   --flip-duration: 0.5s;
   --flip-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --page-w: 340px;
@@ -527,8 +528,19 @@ body.book-mode .desk {
 }
 .right-stack .page-leaf { position: absolute; inset: 0; width: 100%; }
 
+html:has(body.has-cover),
+body.has-cover {
+  background: var(--cover-fall);
+  overflow: hidden;
+}
+body.has-cover .skip { visibility: hidden; }
+body.has-cover .desk {
+  background: var(--cover-fall);
+  perspective: 1800px;
+}
+
 .cover {
-  position: absolute;
+  position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -540,49 +552,44 @@ body.book-mode .desk {
   transition: transform var(--flip-duration) var(--flip-ease);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  z-index: 5;
+  z-index: 8;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: var(--foil);
-  background-color: var(--cloth);
+  background-color: var(--cover-fall);
   background-image: none;
-  background-size: 240px 240px;
-  background-repeat: repeat;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   -webkit-appearance: none;
   appearance: none;
-  box-shadow: 0 16px 32px rgba(74, 48, 28, 0.18);
+  box-shadow: none;
 }
-.cover.is-textured,
-.cue-flap.is-textured {
-  background-image: url("__BASE__textures/cloth-clay.jpg");
+.cover.is-textured {
+  background-image: url("__BASE__textures/cover.jpg");
+  background-image: -webkit-image-set(
+    url("__BASE__textures/cover.webp") type("image/webp"),
+    url("__BASE__textures/cover.jpg") type("image/jpeg")
+  );
+  background-image: image-set(
+    url("__BASE__textures/cover.webp") type("image/webp"),
+    url("__BASE__textures/cover.jpg") type("image/jpeg")
+  );
 }
 .cover[hidden] { display: none; }
-.cover::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(255, 236, 214, 0.08), transparent 28%, transparent 72%, rgba(40, 16, 10, 0.22)),
-    linear-gradient(90deg, rgba(40, 16, 10, 0.18), transparent 8%, transparent 92%, rgba(255, 236, 214, 0.08));
-}
-.cover::after {
-  content: "";
-  position: absolute;
-  top: 6px; right: -5px; bottom: 6px;
-  width: 5px;
-  background: linear-gradient(#f7edd8, #e8d7b8 40%, #f3e6c8);
-  border-radius: 0 1px 1px 0;
-  pointer-events: none;
-}
 
 .cover-inner {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  padding: 24px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .cover-rule {
   width: 72px;
@@ -655,10 +662,8 @@ body.book-mode .desk {
 .cue-flap {
   position: absolute;
   inset: 0;
-  background-color: var(--cloth);
+  background-color: #1a120c;
   background-image: none;
-  background-size: 240px 240px;
-  background-repeat: repeat;
   background-position: right bottom;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
   transform-origin: 50% 50%;
@@ -691,9 +696,18 @@ body.book-mode .desk {
   filter: drop-shadow(-3px -3px 6px rgba(40, 16, 10, 0.28));
 }
 
-.book.is-turning .cover { transform: rotateY(-180deg); }
-.book.is-turning .cover::after { display: none; }
-.book.is-flat .cover { display: none; }
+.cover.is-opening { transform: rotateY(-180deg); }
+.book.is-flat .cover,
+.cover[hidden] { display: none; }
+
+.gold-dust {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  pointer-events: none;
+}
 
 .book.is-turning .page-leaf { pointer-events: none; }
 .book:not(.is-flat) textarea,
@@ -951,9 +965,9 @@ body.has-paper .page-leaf::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.07;
+  opacity: 0.1;
   background-image: url("__BASE__textures/paper-faint.jpg");
-  background-size: 160px 160px;
+  background-size: 180px 250px;
   background-repeat: repeat;
   mix-blend-mode: multiply;
 }

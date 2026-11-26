@@ -86,9 +86,11 @@ export function openCover({ book, cover, reduced, onFlat }) {
     onFlat?.();
     return;
   }
-  if (book.classList.contains("is-turning") || book.classList.contains("is-flat")) return;
+  if (book.classList.contains("is-turning") || book.classList.contains("is-flat") || cover.classList.contains("is-opening")) return;
   book.classList.remove("is-flat");
   book.classList.add("is-open", "is-turning");
+  cover.classList.add("is-opening");
+  playGoldDust();
   let done = false;
   const finish = () => {
     if (done) return;
@@ -106,17 +108,22 @@ export function openCover({ book, cover, reduced, onFlat }) {
 
 export function flattenBook({ book, cover }) {
   stopCoverCue(cover);
+  stopGoldDust();
   book.classList.remove("is-turning", "state-flip");
   book.classList.add("is-open", "is-flat");
+  cover.classList.remove("is-opening");
   cover.setAttribute("hidden", "");
   cover.setAttribute("tabindex", "-1");
+  document.body.classList.remove("has-cover");
   lockBookInputs(book, false);
 }
 
 export function showCover({ book, cover, reduced, peak = false, off = false }) {
   book.classList.remove("is-open", "is-flat", "is-turning", "state-flip");
+  cover.classList.remove("is-opening");
   cover.removeAttribute("hidden");
   cover.removeAttribute("tabindex");
+  document.body.classList.add("has-cover");
   lockBookInputs(book, true);
   startCoverCue(cover, { reduced, peak, off });
 }
@@ -145,20 +152,88 @@ function assetUrl(path) {
 
 export function loadCoverTexture() {
   const apply = () => {
-    document.querySelectorAll(".cover, .cue-flap").forEach((node) => node.classList.add("is-textured"));
+    document.querySelectorAll(".cover").forEach((node) => node.classList.add("is-textured"));
   };
-  const src = assetUrl("textures/cloth-clay.jpg");
+  const sources = [assetUrl("textures/cover.webp"), assetUrl("textures/cover.jpg")];
   const ready = typeof document !== "undefined" &&
-    [...(document.images || [])].some((img) => img.src === src && img.complete);
+    [...(document.images || [])].some((img) => sources.includes(img.src) && img.complete && img.naturalWidth > 0);
   if (ready) {
     apply();
     return;
   }
   const img = new Image();
   img.onload = apply;
-  img.onerror = () => {};
-  img.src = src;
-  if (img.complete) apply();
+  img.onerror = () => {
+    if (img.src.endsWith("cover.webp")) img.src = sources[1];
+  };
+  img.src = sources[0];
+  if (img.complete && img.naturalWidth > 0) apply();
+}
+
+let dustFrame = 0;
+let dustCanvas = null;
+
+export function stopGoldDust() {
+  if (dustFrame) cancelAnimationFrame(dustFrame);
+  dustFrame = 0;
+  dustCanvas?.remove();
+  dustCanvas = null;
+}
+
+export function playGoldDust({ duration = 620 } = {}) {
+  stopGoldDust();
+  if (prefersReducedMotion() || typeof document === "undefined") return;
+  const canvas = document.createElement("canvas");
+  canvas.className = "gold-dust";
+  canvas.setAttribute("aria-hidden", "true");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const fit = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  fit();
+  const width = () => window.innerWidth;
+  const height = () => window.innerHeight;
+  const particles = Array.from({ length: 48 }, () => ({
+    x: width() * (0.35 + Math.random() * 0.6),
+    y: height() * (0.2 + Math.random() * 0.6),
+    r: 0.5 + Math.random() * 1.7,
+    vx: -0.6 + Math.random() * 1.8,
+    vy: -1.4 - Math.random() * 2,
+    life: 0.45 + Math.random() * 0.55,
+    born: Math.random() * 90,
+    warm: Math.random() > 0.35,
+  }));
+  const start = performance.now();
+  const tick = (now) => {
+    const t = now - start;
+    const w = width();
+    const h = height();
+    ctx.clearRect(0, 0, w, h);
+    for (const p of particles) {
+      const age = (t - p.born) / (duration * p.life);
+      if (age <= 0 || age >= 1) continue;
+      const a = age < 0.18 ? age / 0.18 : 1 - (age - 0.18) / 0.82;
+      const x = p.x + p.vx * age * 90;
+      const y = p.y + p.vy * age * 90;
+      ctx.beginPath();
+      ctx.fillStyle = p.warm
+        ? `rgba(232, 196, 106, ${(a * 0.88).toFixed(3)})`
+        : `rgba(255, 236, 180, ${(a * 0.8).toFixed(3)})`;
+      ctx.arc(x, y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (t < duration + 160) dustFrame = requestAnimationFrame(tick);
+    else stopGoldDust();
+  };
+  document.body.appendChild(canvas);
+  dustCanvas = canvas;
+  dustFrame = requestAnimationFrame(tick);
 }
 
 export function loadPaperTexture() {

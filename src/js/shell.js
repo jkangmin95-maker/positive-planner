@@ -216,10 +216,10 @@ export async function mountShell(ctx) {
         el("div", { class: "right-stack" }, [
           el("section", { class: "page-leaf right", id: "book-view", "aria-label": "오늘 한 줄" }),
           el("div", { class: "block-mask", "aria-hidden": "true" }),
-          cover,
         ]),
       ]),
     ]),
+    cover,
     el("nav", { class: "book-tabs", id: "book-tabs", "aria-label": "주요 메뉴", hidden: true }, [
       link("/today", { class: "book-tab", "data-nav": "today" }, "오늘"),
       link("/week", { class: "book-tab", "data-nav": "week" }, "주간"),
