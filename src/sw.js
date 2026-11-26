@@ -13,7 +13,6 @@ const ASSETS = [
   "./icons/favicon-32.png",
   "./fonts/PositiveSerif-Title.woff",
   "./textures/cloth-clay.jpg",
-  "./textures/foil-sheen.jpg",
 ];
 
 self.addEventListener("install", (event) => {

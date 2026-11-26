@@ -1,7 +1,10 @@
 import { createReadStream, existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
+import { createGzip } from "node:zlib";
 import http from "node:http";
 import path from "node:path";
+
+const compressible = new Set([".html", ".js", ".css", ".webmanifest", ".txt", ".svg", ".json"]);
 
 const port = Number(process.env.PORT || 4173);
 const base = "/positive-planner";
@@ -51,11 +54,21 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     const ext = path.extname(file);
-    res.writeHead(200, {
+    const accept = String(req.headers["accept-encoding"] || "");
+    const headers = {
       "Content-Type": types[ext] || "application/octet-stream",
       "Cache-Control": "no-cache",
-    });
-    createReadStream(file).pipe(res);
+    };
+    const stream = createReadStream(file);
+    if (compressible.has(ext) && accept.includes("gzip")) {
+      headers["Content-Encoding"] = "gzip";
+      headers["Vary"] = "Accept-Encoding";
+      res.writeHead(200, headers);
+      stream.pipe(createGzip()).pipe(res);
+      return;
+    }
+    res.writeHead(200, headers);
+    stream.pipe(res);
   } catch {
     res.writeHead(500);
     res.end("error");

@@ -6,6 +6,8 @@ import { formatKoreanDate } from "./dates.js";
 import {
   bindKeyboardInset,
   flattenBook,
+  loadCoverTexture,
+  loadPaperTexture,
   openCover,
   prefersReducedMotion,
   shouldShowCover,
@@ -76,10 +78,12 @@ export function syncCover(route) {
     showCover({ book, cover, reduced, peak, off });
     tabs?.setAttribute("hidden", "");
     tabs?.classList.remove("is-visible");
+    loadCoverTexture();
   } else {
     flattenBook({ book, cover });
     tabs?.removeAttribute("hidden");
     tabs?.classList.add("is-visible");
+    loadPaperTexture();
   }
 }
 
@@ -100,6 +104,7 @@ function bindCover() {
         tabs?.removeAttribute("hidden");
         tabs?.classList.add("is-visible");
         const field = document.getElementById("one-line") || document.querySelector("[data-oneline='today']");
+        loadPaperTexture();
         if (field && !field.disabled) {
           try {
             field.focus({ preventScroll: true });
@@ -245,4 +250,5 @@ export async function mountShell(ctx) {
 
   document.getElementById("app").replaceChildren(app);
   bindCover();
+  loadCoverTexture();
 }

@@ -81,7 +81,11 @@ function registerServiceWorker() {
   const base = document.querySelector("base")?.href;
   if (!base) return;
   const scope = new URL(base).pathname;
-  navigator.serviceWorker.register(new URL("sw.js", base).href, { scope }).catch(() => {});
+  const start = () => {
+    navigator.serviceWorker.register(new URL("sw.js", base).href, { scope }).catch(() => {});
+  };
+  if (typeof requestIdleCallback === "function") requestIdleCallback(start, { timeout: 4000 });
+  else window.setTimeout(start, 2000);
 }
 
 function showPublic(route) {

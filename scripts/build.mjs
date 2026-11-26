@@ -38,8 +38,12 @@ await writeFile("dist/manifest.webmanifest", manifest);
 const sw = (await readFile("src/sw.js", "utf8")).replaceAll("__BUILD_ID__", buildId);
 await writeFile("dist/sw.js", sw);
 
-await cp("src/fonts", "dist/fonts", { recursive: true });
-await cp("src/textures", "dist/textures", { recursive: true });
+await mkdir("dist/fonts", { recursive: true });
+await cp("src/fonts/PositiveSerif-Title.woff", "dist/fonts/PositiveSerif-Title.woff");
+await cp("src/fonts/OFL-PositiveSerif-Title.txt", "dist/fonts/OFL-PositiveSerif-Title.txt");
+await mkdir("dist/textures", { recursive: true });
+await cp("src/textures/cloth-clay.jpg", "dist/textures/cloth-clay.jpg");
+await cp("src/textures/paper-faint.jpg", "dist/textures/paper-faint.jpg");
 await cp("src/icons", "dist/icons", { recursive: true });
 await writeFile("dist/.nojekyll", "");
 
@@ -55,7 +59,7 @@ for (const file of [
   "dist/icons/icon-maskable-512.png",
   "dist/fonts/PositiveSerif-Title.woff",
   "dist/textures/cloth-clay.jpg",
-  "dist/textures/foil-sheen.jpg",
+  "dist/textures/paper-faint.jpg",
 ]) {
   if (!existsSync(file)) throw new Error(`없는 파일: ${file}`);
 }

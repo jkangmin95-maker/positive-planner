@@ -245,3 +245,33 @@ test("첫 방문만 표지를 보여주고 재방문은 바로 펼친다", () =>
   assert.equal(shouldShowCover(new URLSearchParams()), true);
   assert.equal(OPENED_KEY, "pp.hasOpened");
 });
+
+
+function relLum(hex) {
+  const h = hex.replace("#", "");
+  const rgb = [0, 2, 4].map((i) => {
+    const c = Number.parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+}
+
+function contrast(a, b) {
+  const l1 = relLum(a);
+  const l2 = relLum(b);
+  const [hi, lo] = l1 > l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test("본문과 칸 이름은 카드 위에서 최소 7:1이다", async () => {
+  const css = await readFile(new URL("../src/css/app.css", import.meta.url), "utf8");
+  const grab = (name) => css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`))[1];
+  const ink = grab("ink");
+  const muted = grab("muted");
+  const gold = grab("gold");
+  const card = grab("card");
+  assert.equal(ink, "#2c241c");
+  assert.ok(contrast(ink, card) >= 7, `ink ${contrast(ink, card).toFixed(2)}`);
+  assert.ok(contrast(muted, card) >= 7, `muted ${contrast(muted, card).toFixed(2)}`);
+  assert.ok(contrast(gold, card) >= 7, `gold ${contrast(gold, card).toFixed(2)}`);
+});

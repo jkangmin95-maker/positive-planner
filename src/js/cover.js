@@ -136,3 +136,38 @@ export function bindKeyboardInset() {
     viewport.removeEventListener("scroll", apply);
   };
 }
+
+
+function assetUrl(path) {
+  const base = document.querySelector("base")?.href || "/";
+  return new URL(path, base).href;
+}
+
+export function loadCoverTexture() {
+  const apply = () => {
+    document.querySelectorAll(".cover, .cue-flap").forEach((node) => node.classList.add("is-textured"));
+  };
+  const src = assetUrl("textures/cloth-clay.jpg");
+  const ready = typeof document !== "undefined" &&
+    [...(document.images || [])].some((img) => img.src === src && img.complete);
+  if (ready) {
+    apply();
+    return;
+  }
+  const img = new Image();
+  img.onload = apply;
+  img.onerror = () => {};
+  img.src = src;
+  if (img.complete) apply();
+}
+
+export function loadPaperTexture() {
+  if (document.body.classList.contains("has-paper")) return;
+  const run = () => {
+    const img = new Image();
+    img.onload = () => document.body.classList.add("has-paper");
+    img.src = assetUrl("textures/paper-faint.jpg");
+  };
+  if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 2500 });
+  else window.setTimeout(run, 600);
+}
